@@ -1,0 +1,664 @@
+
+Copy
+
+/* ============================================================
+   RESET & ROOT VARIABLES
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Core palette */
+  --bg-app:       #0a0e14;
+  --bg-panel:     #0f1419;
+  --bg-section:   #141a22;
+  --bg-hover:     #1a2230;
+  --border:       #1e2a38;
+  --border-light: #243040;
+
+  /* Text */
+  --text-primary:   #e8edf2;
+  --text-secondary: #7a8fa8;
+  --text-muted:     #445566;
+
+  /* Accent */
+  --accent:         #f0a500;
+  --accent-dim:     #b87800;
+  --accent-glow:    rgba(240, 165, 0, 0.15);
+
+  /* Rent color scale (low → high) */
+  --rent-1: #1a3a5c;
+  --rent-2: #1f6b8a;
+  --rent-3: #2a9d8f;
+  --rent-4: #e9c46a;
+  --rent-5: #e76f51;
+
+  /* Burden color scale */
+  --burden-1: #2d6a4f;
+  --burden-2: #74c69d;
+  --burden-3: #ffd166;
+  --burden-4: #ef6351;
+  --burden-5: #9b2226;
+
+  /* Fonts */
+  --font-sans: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+
+  /* Panel */
+  --panel-width: 360px;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   APP LAYOUT
+   ============================================================ */
+#app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+}
+
+/* ============================================================
+   LEFT PANEL
+   ============================================================ */
+#panel {
+  width: var(--panel-width);
+  min-width: var(--panel-width);
+  height: 100vh;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-light) transparent;
+  z-index: 10;
+}
+
+#panel::-webkit-scrollbar {
+  width: 4px;
+}
+#panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+#panel::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 2px;
+}
+
+/* ---- Panel Header ---- */
+#panel-header {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#panel-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+#panel-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+#panel-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+}
+
+/* ---- Nav ---- */
+#page-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.nav-link {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--text-secondary);
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+  color: var(--text-primary);
+  border-color: var(--border-light);
+  background: var(--bg-hover);
+}
+
+.nav-link.active {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+  background: var(--accent-glow);
+}
+
+/* ---- Panel Sections ---- */
+.panel-section {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+/* ---- Layer Toggle ---- */
+#layer-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--bg-section);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-light);
+}
+
+.toggle-btn.active {
+  background: var(--accent-glow);
+  border-color: var(--accent-dim);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.toggle-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-light);
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+.toggle-btn.active .toggle-dot {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+
+/* ---- Stat Block ---- */
+#stat-section {
+  background: var(--bg-section);
+}
+
+#stat-value {
+  font-family: var(--font-mono);
+  font-size: 2.4rem;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.stat-sub {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+/* ---- Charts ---- */
+#bar-chart,
+#line-chart,
+#donut-chart {
+  width: 100%;
+  height: 160px;
+}
+
+/* C3 dark theme overrides */
+.c3 text {
+  fill: var(--text-secondary) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.6rem !important;
+}
+
+.c3-axis path,
+.c3-axis line {
+  stroke: var(--border) !important;
+}
+
+.c3-grid line,
+.c3-grid path {
+  stroke: var(--border) !important;
+}
+
+.c3-chart-arc path {
+  stroke: var(--bg-panel) !important;
+  stroke-width: 2px;
+}
+
+.c3-tooltip {
+  background: var(--bg-section) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: 4px !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.65rem !important;
+  color: var(--text-primary) !important;
+}
+
+.c3-tooltip td {
+  color: var(--text-primary) !important;
+  font-size: 0.65rem !important;
+}
+
+.c3-tooltip-name {
+  color: var(--text-secondary) !important;
+}
+
+/* ---- Reset Button ---- */
+#reset-row {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#reset-btn {
+  width: 100%;
+  padding: 9px 0;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#reset-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+/* ---- Panel Footer ---- */
+#panel-footer {
+  padding: 16px 24px;
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+#panel-footer p {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+#footer-links {
+  display: flex;
+  gap: 12px;
+}
+
+#footer-links a {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  letter-spacing: 0.06em;
+  transition: color 0.2s ease;
+}
+
+#footer-links a:hover {
+  color: var(--accent);
+}
+
+/* ============================================================
+   MAP
+   ============================================================ */
+#map {
+  flex: 1;
+  height: 100vh;
+  position: relative;
+}
+
+/* Hide default Mapbox popup styling — we use custom tooltip */
+.mapboxgl-popup {
+  display: none !important;
+}
+
+/* Mapbox nav controls */
+.mapboxgl-ctrl-group {
+  background: var(--bg-section) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: 6px !important;
+  overflow: hidden;
+}
+
+.mapboxgl-ctrl-group button {
+  background: var(--bg-section) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.mapboxgl-ctrl-group button:last-child {
+  border-bottom: none !important;
+}
+
+.mapboxgl-ctrl-icon {
+  filter: invert(0.6) !important;
+}
+
+/* ============================================================
+   LEGEND
+   ============================================================ */
+#legend {
+  position: absolute;
+  bottom: 32px;
+  right: 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 14px 16px;
+  z-index: 5;
+  min-width: 160px;
+}
+
+.legend-title {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legend-source {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+/* ============================================================
+   CUSTOM TOOLTIP
+   ============================================================ */
+#tooltip {
+  position: absolute;
+  display: none;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 12px 14px;
+  pointer-events: none;
+  z-index: 20;
+  min-width: 180px;
+  max-width: 220px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+#tt-name {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+#tt-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.tt-key {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.tt-val {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.tt-val.accent {
+  color: var(--accent);
+}
+
+/* ============================================================
+   ABOUT PAGE
+   ============================================================ */
+#about-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+#about-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 48px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#about-nav-title {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+#about-content {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 52px 48px;
+  width: 100%;
+}
+
+.about-section {
+  margin-bottom: 52px;
+}
+
+.about-section-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+.about-section h2 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+  line-height: 1.2;
+}
+
+.about-section p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.75;
+  margin-bottom: 10px;
+}
+
+.about-section a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.about-section a:hover {
+  text-decoration: underline;
+}
+
+/* Team grid */
+#team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.team-card {
+  background: var(--bg-section);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  transition: border-color 0.2s ease;
+}
+
+.team-card:hover {
+  border-color: var(--border-light);
+}
+
+.team-card-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.team-card-role {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
+/* Data sources table */
+.sources-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+}
+
+.sources-table th {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: left;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sources-table td {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.sources-table td:first-child {
+  color: var(--text-primary);
+  font-weight: 500;
+  padding-right: 20px;
+  width: 200px;
+}
+
+.sources-table a {
+  color: var(--accent);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+
+/* ============================================================
+   UTILITY
+   ============================================================ */
+.hidden { display: none !important; }
