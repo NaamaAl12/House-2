@@ -1,296 +1,200 @@
-/* ============================================================
-   charts.js
-   Initializes and updates all C3.js charts:
-     - barChart:   Top neighborhoods by median rent (updates on map move)
-     - lineChart:  Rent over time for a clicked tract (2001–2025)
-     - donutChart: Rent burden breakdown (GRAPI) for a clicked tract
-   ============================================================ */
+// charts.js — C3.js chart initialization and update logic
+// All charts are driven by the rent burden and renter income GeoJSON data
 
-'use strict';
+// Shared state — populated by panel.js after data loads
+window.dashData = {
+  burden50: [],   // Rent_Burden_Greater_than_50 features
+  burden30: [],   // Rent_Burden_Greater_than_30 features
+  income:   []    // Renter_HH_by_Income_Category features
+};
 
-// Chart references — set during init, updated later
-let barChart   = null;
-let lineChart  = null;
-let donutChart = null;
+// Chart instances
+let trendChart, raceChart, incomeChart;
 
-/* ----------------------------------------------------------
-   COLOR HELPERS
-   ---------------------------------------------------------- */
-const RENT_COLOR   = '#f0a500';  // amber accent
-const LINE_COLOR   = '#2a9d8f';  // teal
-const DONUT_COLORS = [
-  '#2d6a4f',  // < 15%  (affordable)
-  '#74c69d',  // 15–20%
-  '#ffd166',  // 20–25%
-  '#ef6351',  // 25–30%
-  '#e63946',  // 30–35%
-  '#9b2226'   // 35%+   (severely burdened)
-];
+// Color palette for race chart bars
+const RACE_COLORS = {
+  'White':            '#38bdf8',
+  'Black':            '#f97316',
+  'Asian':            '#a78bfa',
+  'Hispanic':         '#34d399',
+  'Native':           '#fbbf24',
+  'Pacific Islander': '#f472b6',
+  'Multi':            '#94a3b8',
+  'Other':            '#64748b'
+};
 
-/* ----------------------------------------------------------
-   INIT — called once on page load
-   ---------------------------------------------------------- */
+const INCOME_COLOR = '#f97316';
+
+// -------------------------------------------------------
+// Init all three charts with empty/placeholder data
+// -------------------------------------------------------
 function initCharts() {
 
-  // ---- Bar Chart: Top neighborhoods by rent ----
-  barChart = c3.generate({
-    bindto: '#bar-chart',
+  // TREND CHART — line chart showing burden rate 2006–2022
+  trendChart = c3.generate({
+    bindto: '#chart-trend',
     data: {
       x: 'x',
       columns: [
         ['x'],
-        ['Median Rent']
+        ['Renters']
+      ],
+      type: 'line',
+      colors: { 'Renters': '#f97316' }
+    },
+    point: { show: false },
+    axis: {
+      x: {
+        type: 'category',
+        tick: { rotate: -35, multiline: false, culling: { max: 6 } }
+      },
+      y: {
+        tick: { format: d => (d * 100).toFixed(0) + '%' },
+        min: 0,
+        padding: { bottom: 0 }
+      }
+    },
+    legend: { show: false },
+    padding: { right: 16 },
+    tooltip: {
+      format: {
+        value: v => (v * 100).toFixed(1) + '%'
+      }
+    }
+  });
+
+  // RACE CHART — bar chart for selected year, renters, all ages
+  raceChart = c3.generate({
+    bindto: '#chart-race',
+    data: {
+      x: 'x',
+      columns: [
+        ['x', 'White', 'Black', 'Asian', 'Hispanic', 'Native'],
+        ['Burden', 0, 0, 0, 0, 0]
       ],
       type: 'bar',
-      colors: { 'Median Rent': RENT_COLOR }
+      colors: {
+        Burden: function(d) {
+          const colors = ['#38bdf8','#f97316','#a78bfa','#34d399','#fbbf24'];
+          return colors[d.index % colors.length];
+        }
+      },
+      color: function(color, d) {
+        const colors = ['#38bdf8','#f97316','#a78bfa','#34d399','#fbbf24'];
+        return d && d.index !== undefined ? colors[d.index % colors.length] : color;
+      }
     },
     bar: { width: { ratio: 0.65 } },
     axis: {
-      rotated: false,
-      x: {
-        type: 'category',
-        tick: {
-          rotate: -35,
-          multiline: false,
-          format: function(d) {
-            // Truncate long neighborhood names
-            const labels = barChart && barChart.internal.config.axis_x_categories;
-            if (!labels) return d;
-            const name = labels[d] || '';
-            return name.length > 12 ? name.slice(0, 11) + '…' : name;
-          }
-        },
-        height: 52
-      },
+      x: { type: 'category', tick: { rotate: -25, multiline: false } },
       y: {
-        min: 800,
-        padding: { bottom: 0 },
-        tick: {
-          format: d => '$' + (d / 1000).toFixed(1) + 'k'
-        }
+        tick: { format: d => (d * 100).toFixed(0) + '%' },
+        min: 0,
+        padding: { bottom: 0 }
       }
-    },
-    grid: {
-      y: { show: true }
     },
     legend: { show: false },
-    padding: { right: 16, left: 4 },
+    padding: { right: 16 },
     tooltip: {
-      format: {
-        value: d => '$' + d.toLocaleString()
-      }
+      format: { value: v => (v * 100).toFixed(1) + '%' }
     }
   });
 
-  // ---- Line Chart: Rent over time for selected tract ----
-  lineChart = c3.generate({
-    bindto: '#line-chart',
+  // INCOME CHART — bar chart of renter households by income bracket for selected year
+  incomeChart = c3.generate({
+    bindto: '#chart-income',
     data: {
       x: 'x',
       columns: [
-        ['x'],
-        ['Rent per Unit']
+        ['x', '<30% AMI', '30–50%', '50–80%', '80–120%', '>120%'],
+        ['Households', 0, 0, 0, 0, 0]
       ],
-      type: 'line',
-      colors: { 'Rent per Unit': LINE_COLOR }
+      type: 'bar',
+      colors: { Households: INCOME_COLOR }
     },
-    point: { r: 2, focus: { expand: { r: 4 } } },
+    bar: { width: { ratio: 0.65 } },
     axis: {
-      x: {
-        type: 'category',
-        tick: {
-          culling: { max: 6 },
-          multiline: false
-        },
-        height: 28
-      },
+      x: { type: 'category', tick: { rotate: -25, multiline: false } },
       y: {
+        tick: { format: d => d >= 1000 ? (d/1000).toFixed(0) + 'k' : d },
         min: 0,
-        padding: { bottom: 0 },
-        tick: {
-          format: d => '$' + (d / 1000).toFixed(1) + 'k'
-        }
+        padding: { bottom: 0 }
       }
-    },
-    grid: {
-      y: { show: true }
     },
     legend: { show: false },
-    padding: { right: 16, left: 4 },
+    padding: { right: 16 },
     tooltip: {
-      format: {
-        value: d => '$' + d.toLocaleString()
-      }
-    }
-  });
-
-  // ---- Donut Chart: GRAPI rent burden breakdown ----
-  donutChart = c3.generate({
-    bindto: '#donut-chart',
-    data: {
-      columns: [
-        ['< 15%',  0],
-        ['15–20%', 0],
-        ['20–25%', 0],
-        ['25–30%', 0],
-        ['30–35%', 0],
-        ['35%+',   0]
-      ],
-      type: 'donut',
-      colors: {
-        '< 15%':  DONUT_COLORS[0],
-        '15–20%': DONUT_COLORS[1],
-        '20–25%': DONUT_COLORS[2],
-        '25–30%': DONUT_COLORS[3],
-        '30–35%': DONUT_COLORS[4],
-        '35%+':   DONUT_COLORS[5]
-      }
-    },
-    donut: {
-      title: '',
-      width: 28,
-      label: { show: false }
-    },
-    legend: {
-      show: true,
-      position: 'right',
-      item: {
-        tile: { width: 8, height: 8 }
-      }
-    },
-    padding: { right: 0, left: 0 },
-    tooltip: {
-      format: {
-        value: (value, ratio) =>
-          value.toLocaleString() + ' (' + (ratio * 100).toFixed(1) + '%)'
-      }
+      format: { value: v => v.toLocaleString() + ' households' }
     }
   });
 }
 
-/* ----------------------------------------------------------
-   UPDATE BAR CHART
-   Called by panel.js whenever the map moves.
-   Receives array of { neighborhood, rent } objects.
-   ---------------------------------------------------------- */
-function updateBarChart(data) {
-  if (!barChart || !data || data.length === 0) return;
+// -------------------------------------------------------
+// Update trend chart when threshold toggle changes
+// -------------------------------------------------------
+function updateTrendChart(threshold) {
+  const dataset = threshold === 50 ? window.dashData.burden50 : window.dashData.burden30;
 
-  // Aggregate by neighborhood — take average rent per neighborhood
-  const grouped = {};
-  data.forEach(d => {
-    const n = d.neighborhood || 'Unknown';
-    if (!grouped[n]) grouped[n] = [];
-    grouped[n].push(d.rent);
-  });
+  // Filter: Renters, All race, All age — sorted by year
+  const rows = dataset
+    .filter(f => f.TENURE === 'Renters' && f.RACE === 'All' && f.AGE === 'All')
+    .sort((a, b) => a.YEAR - b.YEAR);
 
-  // Average rent per neighborhood, sort descending, take top 8
-  const sorted = Object.entries(grouped)
-    .map(([name, rents]) => ({
-      name,
-      rent: Math.round(rents.reduce((a, b) => a + b, 0) / rents.length)
-    }))
-    .filter(d => d.rent > 0)
-    .sort((a, b) => b.rent - a.rent)
-    .slice(0, 8);
+  if (!rows.length) return;
 
-  if (sorted.length === 0) return;
+  const years   = rows.map(r => String(r.YEAR));
+  const burdens = rows.map(r => r.All_);
 
-  barChart.load({
+  trendChart.load({
     columns: [
-      ['x',           ...sorted.map(d => d.name)],
-      ['Median Rent', ...sorted.map(d => d.rent)]
+      ['x', ...years],
+      ['Renters', ...burdens]
     ]
   });
 }
 
-/* ----------------------------------------------------------
-   UPDATE LINE CHART
-   Called when user clicks a tract.
-   Receives the RENT_TIMESERIES array from that tract's properties.
-   ---------------------------------------------------------- */
-function updateLineChart(tractName, timeseries) {
-  if (!lineChart || !timeseries || timeseries.length === 0) return;
+// -------------------------------------------------------
+// Update race and income charts for a given year + threshold
+// -------------------------------------------------------
+function updateYearCharts(year, threshold) {
+  const dataset = threshold === 50 ? window.dashData.burden50 : window.dashData.burden30;
 
-  // Filter to entries with valid rent, sort by year
-  const valid = timeseries
-    .filter(d => d.rent && d.rent > 0)
-    .sort((a, b) => a.year - b.year);
+  // Race breakdown — Renters, All age, selected year
+  const races = ['White', 'Black', 'Asian', 'Hispanic', 'Native'];
+  const raceValues = races.map(race => {
+    const row = dataset.find(f =>
+      f.YEAR === year && f.TENURE === 'Renters' && f.RACE === race && f.AGE === 'All'
+    );
+    return row ? row.All_ : 0;
+  });
 
-  if (valid.length === 0) return;
-
-  // Update chart title
-  document.getElementById('chart2-title').textContent =
-    tractName + ' · Rent Over Time';
-
-  lineChart.load({
+  raceChart.load({
     columns: [
-      ['x',            ...valid.map(d => String(d.year))],
-      ['Rent per Unit', ...valid.map(d => d.rent)]
+      ['x', ...races],
+      ['Burden', ...raceValues]
     ]
   });
-}
 
-/* ----------------------------------------------------------
-   UPDATE DONUT CHART
-   Called when user clicks a tract.
-   Receives the tract properties object.
-   ---------------------------------------------------------- */
-function updateDonutChart(tractName, props) {
-  if (!donutChart) return;
+  document.getElementById('race-year').textContent = '(' + year + ')';
 
-  const g1 = props.GRAPI_LESS_15  || 0;
-  const g2 = props.GRAPI_15_20    || 0;
-  const g3 = props.GRAPI_20_25    || 0;
-  const g4 = props.GRAPI_25_30    || 0;
-  const g5 = props.GRAPI_30_35    || 0;
-  const g6 = props.GRAPI_35_PLUS  || 0;
-
-  // Update chart title
-  document.getElementById('chart3-title').textContent =
-    tractName + ' · Rent Burden';
-
-  donutChart.load({
-    columns: [
-      ['< 15%',  g1],
-      ['15–20%', g2],
-      ['20–25%', g3],
-      ['25–30%', g4],
-      ['30–35%', g5],
-      ['35%+',   g6]
-    ]
-  });
-}
-
-/* ----------------------------------------------------------
-   RESET CHARTS
-   Called by the reset button — clears click-based charts
-   back to their default empty/placeholder state.
-   ---------------------------------------------------------- */
-function resetCharts() {
-  if (lineChart) {
-    document.getElementById('chart2-title').textContent =
-      'Click a tract · Rent Over Time';
-    lineChart.load({
+  // Income category — selected year
+  const incRow = window.dashData.income.find(f => f.YEAR === year);
+  if (incRow) {
+    incomeChart.load({
       columns: [
-        ['x'],
-        ['Rent per Unit']
+        ['x', '<30% AMI', '30–50%', '50–80%', '80–120%', '>120%'],
+        ['Households', incRow.F0___30_, incRow.F30___50_, incRow.F50___80_, incRow.F80___120_, incRow.Above_120_]
       ]
     });
+    document.getElementById('income-year').textContent = '(' + year + ')';
   }
 
-  if (donutChart) {
-    document.getElementById('chart3-title').textContent =
-      'Click a tract · Rent Burden Breakdown';
-    donutChart.load({
-      columns: [
-        ['< 15%',  0],
-        ['15–20%', 0],
-        ['20–25%', 0],
-        ['25–30%', 0],
-        ['30–35%', 0],
-        ['35%+',   0]
-      ]
-    });
+  // Update the big stat number — Renters, All race, All age
+  const statRow = dataset.find(f =>
+    f.YEAR === year && f.TENURE === 'Renters' && f.RACE === 'All' && f.AGE === 'All'
+  );
+  if (statRow) {
+    const pct = (statRow.All_ * 100).toFixed(1) + '%';
+    document.getElementById('burden-stat').textContent = pct;
   }
 }
